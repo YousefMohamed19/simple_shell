@@ -1,33 +1,46 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <unistd.h>
 
-#define MAX_COMMAND_LENGTH 100
-
-void executeCommand(char* command) {
-    if (system(command) == -1) {
-        perror("Error executing command");
-    }
-}
-
-int main() {
-    char command[MAX_COMMAND_LENGTH];
+int main(void) {
+    char *command = NULL;
+    size_t len = 0;
+    ssize_t read;
 
     while (1) {
-        printf("#cisfun$ ");
-        if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL) {
+        printf("simple_shell$ ");
+
+        // Read a line of input
+        read = getline(&command, &len, stdin);
+
+        // Check for end of file (Ctrl+D)
+        if (read == -1) {
+            free(command);
             printf("\n");
-            break; // End of file condition (Ctrl+D)
-        }
-
-        // Remove trailing newline character
-        command[strcspn(command, "\n")] = '\0';
-
-        if (strcmp(command, "exit") == 0) {
             break;
         }
 
-        executeCommand(command);
+        // Remove trailing newline character
+        if (command[read - 1] == '\n') {
+            command[read - 1] = '\0';
+        }
+
+        // Execute the command
+        if (access(command, X_OK) == 0) {
+            pid_t pid = fork();
+
+            if (pid == 0) {
+                execlp(command, command, NULL);
+                perror("Error");
+                exit(EXIT_FAILURE);
+            } else if (pid < 0) {
+                perror("Fork failed");
+            } else {
+                wait(NULL);
+            }
+        } else {
+            printf("Error: Command not found\n");
+        }
     }
 
     return 0;
