@@ -1,1 +1,1 @@
-ALX Simple Shell
+simple shell
